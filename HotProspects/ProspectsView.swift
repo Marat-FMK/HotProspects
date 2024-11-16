@@ -17,10 +17,14 @@ struct ProspectsView: View {
     
     @Query(sort: \Prospect.name) var prospects: [Prospect]
     @Environment(\.modelContext) var modelContext
+    @Query(sort: \Prospect.date) var sortProspects: [Prospect]
     
     @State private var selectedProspects = Set<Prospect>()
     @State private var isShowingScanner = false
     
+    @State private var sort = "by name"
+    
+    let sortStyle = ["by name", "by date"]
     let filter: FilterType
     
     var title: String {
@@ -48,17 +52,27 @@ struct ProspectsView: View {
     
     var body: some View {
         NavigationStack {
-            List(prospects, selection: $selectedProspects) { prospect in
+            
+            Picker("Sort", selection: $sort) {
+                ForEach(sortStyle, id: \.self) {
+                    Text($0)
+                }
+            }
+            .pickerStyle(.segmented)
+            
+            List(sort == "by name" ? prospects : sortProspects, selection: $selectedProspects) { prospect in // sort by date
                 HStack {
-                    VStack(alignment: .leading) {
-                        Text(prospect.name)
-                            .font(.headline)
-                        Text(prospect.emailAddress)
-                            .foregroundStyle(.secondary)
-                    }
-                    if prospect.isContacted {
-                        Spacer()
-                        Image(systemName: "phone.badge.checkmark")
+                    NavigationLink(destination: EditingProspectView(prospect: prospect)) {
+                        VStack(alignment: .leading) {
+                            Text(prospect.name)
+                                .font(.headline)
+                            Text(prospect.emailAddress)
+                                .foregroundStyle(.secondary)
+                        }
+                        if prospect.isContacted {
+                            Spacer()
+                            Image(systemName: "phone.badge.checkmark")
+                        }
                     }
                 }
                 .swipeActions {
@@ -156,7 +170,7 @@ struct ProspectsView: View {
             let details = result.string.components(separatedBy: "\n") // делим отсканированное на 2 слова
             guard details.count == 2 else { return }
 
-            let person = Prospect(name: details[0], emailAddress: details[1], isContacted: false)//массив получаем разделенные слова , котоые нужны для создания ПРОСПЕКТ
+            let person = Prospect(name: details[0], emailAddress: details[1], isContacted: false, date: Date.now)//массив получаем разделенные слова , котоые нужны для создания ПРОСПЕКТ
 
             modelContext.insert(person)
         case .failure(let error):
